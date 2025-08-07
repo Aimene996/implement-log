@@ -13,7 +13,7 @@ class ConfirmResetDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      backgroundColor: const Color(0xFF121417),
+      backgroundColor: const Color(0xFF1C2126),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: SizedBox(
         width: 332,

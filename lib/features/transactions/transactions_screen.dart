@@ -4,7 +4,7 @@ import 'package:mactest/features/providers/currency_provider.dart';
 import 'package:provider/provider.dart';
 
 import 'package:mactest/features/models/transaction.dart';
-import 'package:mactest/features/services/data_service.dart';
+import 'package:mactest/features/services/transaction_helper.dart';
 import 'package:mactest/features/transactions/add_new_transaction.dart';
 
 class FakeTransaction extends StatefulWidget {

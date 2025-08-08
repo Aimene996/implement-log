@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:hive/hive.dart';
-import 'package:mactest/features/models/category_item.dart';
+import 'package:mactest/features/providers/custom_category.dart';
+import 'package:provider/provider.dart';
 
 class AddCustomCategory extends StatefulWidget {
   const AddCustomCategory({super.key, required this.transactionType});
@@ -36,16 +36,15 @@ class _AddCustomCategoryState extends State<AddCustomCategory> {
     setState(() => _isLoading = true);
 
     try {
-      final newCategory = CategoryItem(
-        title: name,
-        imagePath: 'assets/images/custom.png', // Provide a default icon
-        type: widget.transactionType,
+      final provider = Provider.of<CustomCategoryProvider>(
+        context,
+        listen: false,
       );
 
-      final box = await Hive.openBox<CategoryItem>('categories');
-      await box.add(newCategory);
+      // Use the provider's addCategory method
+      await provider.addCategory(name, widget.transactionType);
 
-      print('✅ Custom category "${newCategory.title}" added.');
+      print('✅ Custom category "$name" added via provider.');
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

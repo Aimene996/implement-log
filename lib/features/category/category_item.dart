@@ -87,6 +87,11 @@ final List<CategoryItem> allCategories = [
     imagePath: 'assets/Charity.png',
     type: 'Expense',
   ),
+  CategoryItem(
+    title: 'Other',
+    imagePath: 'assets/Charity.png',
+    type: 'Expense',
+  ),
 
   // Income Categories
   CategoryItem(

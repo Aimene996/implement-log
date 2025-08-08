@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mactest/features/models/custom_category.dart';
 import 'package:mactest/features/providers/currency_provider.dart';
-import 'package:mactest/features/services/custom_category_helper.dart';
+import 'package:mactest/features/providers/custom_category.dart'; // Add this import
 import 'package:mactest/features/services/settings_helper.dart';
 import 'package:mactest/features/settings/widgets/reset_dialog.dart';
 import 'package:mactest/features/models/currency.dart';
@@ -17,27 +17,40 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   List<CustomCategory> incomeCategories = [];
   List<CustomCategory> expensesCategories = [];
+  bool isLoading = false;
 
-  void fetchCustomCategories() async {
-    final customCategories =
-        await CustomCategoryHelper.getAllCustomCategories();
+  // Updated method using provider
+  Future<void> fetchCustomCategories() async {
+    setState(() => isLoading = true);
 
-    final List<CustomCategory> incomeList = [];
-    final List<CustomCategory> expenseList = [];
+    final provider = Provider.of<CustomCategoryProvider>(
+      context,
+      listen: false,
+    );
 
-    for (CustomCategory category in customCategories) {
-      if (category.type.toLowerCase() == 'income') {
-        incomeList.add(category);
-      } else if (category.type.toLowerCase() == 'expense') {
-        expenseList.add(category);
+    try {
+      // Load income categories
+      await provider.loadCategories(type: 'income');
+      final List<CustomCategory> incomeList = List.from(provider.categories);
+
+      // Load expense categories
+      await provider.loadCategories(type: 'expense');
+      final List<CustomCategory> expenseList = List.from(provider.categories);
+
+      setState(() {
+        incomeCategories = incomeList;
+        expensesCategories = expenseList;
+      });
+
+      // Debug prints
+      for (CustomCategory category in [...incomeList, ...expenseList]) {
+        debugPrint('Category: ${category.name}, Type: ${category.type}');
       }
-      debugPrint('Category: ${category.name}, Type: ${category.type}');
+    } catch (e) {
+      debugPrint('Error fetching categories: $e');
+    } finally {
+      setState(() => isLoading = false);
     }
-
-    setState(() {
-      incomeCategories = incomeList;
-      expensesCategories = expenseList;
-    });
   }
 
   String selectedCurrencyCode = 'USD';
@@ -59,8 +72,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void initState() {
     super.initState();
     _loadCurrency();
-    _loadCategories();
-    fetchCustomCategories();
+    fetchCustomCategories(); // Use the updated method
   }
 
   Future<void> _loadCurrency() async {
@@ -70,42 +82,153 @@ class _SettingsScreenState extends State<SettingsScreen> {
     });
   }
 
-  Future<void> _loadCategories() async {
-    final income = await CustomCategoryHelper.getCustomCategoriesByType(
-      'Income',
-    );
-    final expense = await CustomCategoryHelper.getCustomCategoriesByType(
-      'Expense',
-    );
-    setState(() {
-      incomeCategories = income;
-      expensesCategories = expense;
-    });
-  }
-
+  // Updated delete method using provider
   Future<void> _deleteCategory(CustomCategory category) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Category'),
-        content: Text('Are you sure you want to delete "${category.name}"?'),
+        backgroundColor: const Color(0xFF2B3036), // Match your theme
+        title: const Text(
+          'Delete Category',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: Text(
+          'Are you sure you want to delete "${category.name}"?',
+          style: const TextStyle(color: Colors.white70),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: Colors.white70),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Delete'),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
     );
 
     if (confirmed == true) {
-      await category.delete();
-      await _loadCategories();
+      try {
+        final provider = Provider.of<CustomCategoryProvider>(
+          context,
+          listen: false,
+        );
+        await provider.deleteCategory(category.key!, category.type);
+
+        // Refresh the categories
+        await fetchCustomCategories();
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Category deleted successfully!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error deleting category: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
     }
+  }
+
+  // Add delete all functionality - this will be used by both Delete All and Reset buttons
+  Future<void> _deleteAllCategories() async {
+    try {
+      final provider = Provider.of<CustomCategoryProvider>(
+        context,
+        listen: false,
+      );
+      await provider.clearAll();
+
+      // Refresh the categories
+      await fetchCustomCategories();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('All categories deleted successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error deleting categories: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  // Function to show the Delete All confirmation dialog (for Delete All button)
+  // Future<void> _showDeleteAllDialog() async {
+  //   final confirmed = await showDialog<bool>(
+  //     context: context,
+  //     builder: (context) => AlertDialog(
+  //       backgroundColor: const Color(0xFF2B3036),
+  //       title: const Text(
+  //         'Delete All Categories',
+  //         style: TextStyle(color: Colors.white),
+  //       ),
+  //       content: const Text(
+  //         'Are you sure you want to delete all custom categories? This action cannot be undone.',
+  //         style: TextStyle(color: Colors.white70),
+  //       ),
+  //       actions: [
+  //         TextButton(
+  //           onPressed: () => Navigator.of(context).pop(false),
+  //           child: const Text(
+  //             'Cancel',
+  //             style: TextStyle(color: Colors.white70),
+  //           ),
+  //         ),
+  //         TextButton(
+  //           onPressed: () => Navigator.of(context).pop(true),
+  //           child: const Text(
+  //             'Delete All',
+  //             style: TextStyle(color: Colors.red),
+  //           ),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+
+  //   if (confirmed == true) {
+  //     await _deleteAllCategories();
+  //   }
+  // }
+
+  // Function to show the Reset confirmation dialog (for Reset button)
+  void _showResetDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => ConfirmResetDialog(
+        onConfirm: () {
+          Navigator.of(context).pop(); // Close the dialog first
+          _deleteAllCategories(); // Then execute the same delete function
+        },
+        onCancel: () {
+          Navigator.of(context).pop(); // Just close the dialog
+        },
+      ),
+    );
   }
 
   @override
@@ -126,24 +249,63 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     const SizedBox(height: 16),
                     _buildCurrencyDropdown(),
 
-                    _buildSectionTitle('Custom Categories'),
+                    // Custom Categories Section with Delete All button
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [_buildSectionTitle('Custom Categories')],
+                    ),
+
                     _buildSubTitle('Income'),
-                    _buildCategoryWrap(incomeCategories),
+                    isLoading
+                        ? const Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(16.0),
+                              child: CircularProgressIndicator(),
+                            ),
+                          )
+                        : incomeCategories.isEmpty
+                        ? const Padding(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 26,
+                              vertical: 8,
+                            ),
+                            child: Text(
+                              'There is no custom category',
+                              style: TextStyle(
+                                color: Colors.grey,
+                                fontSize: 14,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                          )
+                        : _buildCategoryWrap(incomeCategories),
 
                     _buildSubTitle('Expenses'),
-                    _buildCategoryWrap(expensesCategories),
+                    isLoading
+                        ? const SizedBox.shrink() // Don't show loading twice
+                        : expensesCategories.isEmpty
+                        ? const Padding(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 26,
+                              vertical: 8,
+                            ),
+                            child: Text(
+                              'There is no custom category',
+                              style: TextStyle(
+                                color: Colors.grey,
+                                fontSize: 14,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                          )
+                        : _buildCategoryWrap(expensesCategories),
 
                     const Spacer(),
 
-                    // Reset button
+                    // Reset button - UPDATED
                     GestureDetector(
-                      onTap: () => showDialog(
-                        context: context,
-                        builder: (context) => ConfirmResetDialog(
-                          onConfirm: () => Navigator.of(context).pop(),
-                          onCancel: () => Navigator.of(context).pop(),
-                        ),
-                      ),
+                      onTap:
+                          _showResetDialog, // Now properly calls the reset dialog function
                       child: Container(
                         width: 358,
                         height: 40,
@@ -231,7 +393,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Widget _buildSectionTitle(String title) {
     return Container(
-      width: 390,
       height: 47,
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Padding(

@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:mactest/features/models/category_item.dart';
+import 'package:mactest/features/models/custom_category.dart';
 import 'package:mactest/features/providers/custom_category.dart';
 // import 'package:mactest/features/providers/custom_category.dart';
 import 'package:mactest/features/providers/transaction_provider.dart';
@@ -33,11 +34,12 @@ void main() async {
   Hive.registerAdapter(CategoryItemAdapter());
   Hive.registerAdapter(TransactionAdapter());
   Hive.registerAdapter(CurrencyAdapter());
+  Hive.registerAdapter(CustomCategoryAdapter());
 
   // Open Hive Boxes
   await Hive.openBox<Transaction>('transactions');
   await Hive.openBox<Currency>('currencyBox');
-  // await Hive.openBox<Currency>('custom_categories');
+  await Hive.openBox<CustomCategory>('custom_categories');
   //await TransactionHelper.initCategoryBox();
 
   // Run App with Providers
@@ -59,7 +61,6 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    print('object');
     return MaterialApp(
       title: 'MacTest',
       debugShowCheckedModeBanner: false,

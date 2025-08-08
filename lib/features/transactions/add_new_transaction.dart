@@ -1,9 +1,11 @@
+// ignore_for_file: deprecated_member_use, avoid_print
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:mactest/features/category/add_category_screen.dart';
 import 'package:mactest/features/models/transaction.dart';
 import 'package:mactest/features/providers/currency_provider.dart';
-import 'package:mactest/features/services/data_service.dart';
+import 'package:mactest/features/services/transaction_helper.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 

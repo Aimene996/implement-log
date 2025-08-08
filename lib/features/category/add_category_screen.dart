@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:mactest/features/category/add_custom_category.dart';
 import 'package:mactest/features/category/category_item.dart';
+import 'package:mactest/features/models/custom_category.dart';
+import 'package:mactest/features/providers/custom_category.dart';
+import 'package:provider/provider.dart';
 
 class AddCategoryScreen extends StatefulWidget {
   const AddCategoryScreen({super.key, required this.transactionType});
-  final String transactionType; // Now required
+  final String transactionType;
 
   @override
   State<AddCategoryScreen> createState() => _AddCategoryScreenState();
@@ -17,12 +20,17 @@ class _AddCategoryScreenState extends State<AddCategoryScreen> {
   @override
   void initState() {
     super.initState();
-    // Filter based on type (e.g., "Expense" or "Income")
     filteredCategories = allCategories.where((category) {
       return category.type.toLowerCase() ==
           widget.transactionType.toLowerCase();
     }).toList();
-    print(selectedCategory);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<CustomCategoryProvider>(
+        context,
+        listen: false,
+      ).loadCategories(type: widget.transactionType);
+    });
   }
 
   @override
@@ -62,72 +70,93 @@ class _AddCategoryScreenState extends State<AddCategoryScreen> {
             ),
             const SizedBox(height: 12),
             Expanded(
-              child: GridView.builder(
-                itemCount: filteredCategories.length,
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  childAspectRatio: 3.5,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                ),
-                itemBuilder: (context, index) {
-                  final category = filteredCategories[index];
-                  final isSelected = selectedCategory!=null && selectedCategory!.title == category.title;
+              child: Consumer<CustomCategoryProvider>(
+                builder: (context, customCategoryProvider, child) {
+                  final customMapped = customCategoryProvider.categories
+                      .map(
+                        (custom) => CategoryItem(
+                          title: custom.name,
+                          imagePath: 'assets/interogation.png',
+                          type: custom.type,
+                        ),
+                      )
+                      .toList();
 
-                  return GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        selectedCategory = isSelected ? null : category;
-                      });
-                    },
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? const Color(0xFF374151)
-                            : const Color(0xFF2A2D31),
-                        borderRadius: BorderRadius.circular(12),
-                        border: isSelected
-                            ? Border.all(
-                                color: const Color(0xFF3B82F6),
-                                width: 2,
-                              )
-                            : null,
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
+                  final allDisplayCategories = [
+                    ...filteredCategories,
+                    ...customMapped,
+                  ];
+
+                  return GridView.builder(
+                    itemCount: allDisplayCategories.length,
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          childAspectRatio: 3.5,
+                          crossAxisSpacing: 12,
+                          mainAxisSpacing: 12,
                         ),
-                        child: Row(
-                          children: [
-                            Image.asset(
-                              category.imagePath,
-                              width: 24,
-                              height: 24,
-                              color: Colors.white,
+                    itemBuilder: (context, index) {
+                      final category = allDisplayCategories[index];
+                      final isSelected =
+                          selectedCategory?.title == category.title;
+
+                      return GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            selectedCategory = isSelected ? null : category;
+                          });
+                        },
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? const Color(0xFF374151)
+                                : const Color(0xFF2A2D31),
+                            borderRadius: BorderRadius.circular(12),
+                            border: isSelected
+                                ? Border.all(
+                                    color: const Color(0xFF3B82F6),
+                                    width: 2,
+                                  )
+                                : null,
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
                             ),
-                            // Icon(category.imagePath, color: Colors.white, size: 20),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                category.title,
-                                style: const TextStyle(
+                            child: Row(
+                              children: [
+                                Image.asset(
+                                  category.imagePath.isNotEmpty
+                                      ? category.imagePath
+                                      : 'assets/interogation.png',
+                                  width: 20, // Reduced size
+                                  height: 20,
                                   color: Colors.white,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
                                 ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    category.title,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
+                          ),
                         ),
-                      ),
-                    ),
+                      );
+                    },
                   );
                 },
               ),
             ),
-
             const SizedBox(height: 16),
 
             // Add Custom Category Button
@@ -135,14 +164,31 @@ class _AddCategoryScreenState extends State<AddCategoryScreen> {
               width: double.infinity,
               height: 48,
               child: ElevatedButton(
-                onPressed: () {
-                  Navigator.of(context).push(
+                onPressed: () async {
+                  final result = await Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (_) => AddCustomCategory(
                         transactionType: widget.transactionType,
                       ),
                     ),
                   );
+
+                  // Reload categories
+                  await Provider.of<CustomCategoryProvider>(
+                    context,
+                    listen: false,
+                  ).loadCategories(type: widget.transactionType);
+
+                  // Auto-select newly added custom category
+                  if (result != null && result is CustomCategory) {
+                    setState(() {
+                      selectedCategory = CategoryItem(
+                        title: result.name,
+                        imagePath: 'assets/interogation.png',
+                        type: result.type,
+                      );
+                    });
+                  }
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF374151),
@@ -161,7 +207,6 @@ class _AddCategoryScreenState extends State<AddCategoryScreen> {
                 ),
               ),
             ),
-
             const SizedBox(height: 8),
 
             // Select Button
@@ -200,7 +245,7 @@ class _AddCategoryScreenState extends State<AddCategoryScreen> {
   }
 }
 
-// Category item model stays the same
+// CategoryItem model
 class CategoryItem {
   final String title;
   final String imagePath;

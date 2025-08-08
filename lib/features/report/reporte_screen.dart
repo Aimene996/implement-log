@@ -500,12 +500,9 @@ class TransactionTab extends StatelessWidget {
                 ),
               )
             else
-              ...sortedCategories
-                  .map(
-                    (entry) =>
-                        _buildCategoryBar(entry.key, entry.value, maxAmount),
-                  )
-                  .toList(),
+              ...sortedCategories.map(
+                (entry) => _buildCategoryBar(entry.key, entry.value, maxAmount),
+              ),
             const SizedBox(height: 32),
           ],
         ),

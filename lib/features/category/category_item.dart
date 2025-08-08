@@ -111,4 +111,5 @@ final List<CategoryItem> allCategories = [
     type: 'Income',
   ),
   CategoryItem(title: 'Gifts', imagePath: 'assets/Gifts.png', type: 'Income'),
+  CategoryItem(title: 'Other', imagePath: 'assets/Salary.png', type: 'Income'),
 ];

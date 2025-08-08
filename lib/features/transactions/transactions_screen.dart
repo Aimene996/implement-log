@@ -1,3 +1,5 @@
+// ignore_for_file: unused_local_variable
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:mactest/features/providers/currency_provider.dart';
@@ -38,6 +40,8 @@ class _FakeTransactionState extends State<FakeTransaction> {
       case 'bonuses':
         return 'assets/Bonuses.png';
       case 'gifts':
+        return 'assets/Gifts.png';
+      case 'Other':
         return 'assets/Gifts.png';
 
       // Expense categories
@@ -84,11 +88,11 @@ class _FakeTransactionState extends State<FakeTransaction> {
       case 'utilities':
         return 'assets/Utilities.png';
       case 'other':
-        return 'assets/Other.png';
+        return 'assets/Salary.png';
 
       // Default fallback
       default:
-        return 'assets/Other.png'; // Use 'Other' as default instead of a non-existent file
+        return 'assets/Salary.png'; // Use 'Other' as default instead of a non-existent file
     }
   }
 
@@ -336,7 +340,7 @@ class _FakeTransactionState extends State<FakeTransaction> {
                                             ? Icons.arrow_downward
                                             : Icons.arrow_upward,
                                         color: Colors.white,
-                                        size: 28,
+                                        size: 24,
                                       );
                                     },
                                   ),

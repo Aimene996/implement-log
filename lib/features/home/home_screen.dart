@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:mactest/features/models/custom_category.dart';
 import 'package:mactest/features/models/transaction.dart';
 import 'package:mactest/features/providers/currency_provider.dart';
@@ -9,29 +10,25 @@ import 'package:provider/provider.dart';
 
 const double horizontalPadding = 16.0;
 
-const TextStyle sectionTitleStyle = TextStyle(
+final sectionTitleStyle = GoogleFonts.inter(
   fontSize: 22,
   fontWeight: FontWeight.bold,
-  fontFamily: 'inter',
 );
 
-const TextStyle cardTitleStyle = TextStyle(fontSize: 16, color: Colors.white);
+final cardTitleStyle = GoogleFonts.inter(fontSize: 16, color: Colors.white);
 
-const TextStyle cardValueStyle = TextStyle(
+final cardValueStyle = GoogleFonts.inter(
   fontSize: 24,
   fontWeight: FontWeight.bold,
   color: Colors.white,
 );
 
-const TextStyle subtitleStyle = TextStyle(
+final subtitleStyle = GoogleFonts.inter(
   fontSize: 14,
-  color: Color(0xFF9EABBA),
+  color: const Color(0xFF9EABBA),
 );
 
-const TextStyle amountTextStyle = TextStyle(
-  fontSize: 16,
-  // fontWeight: FontWeight.w400,
-);
+final amountTextStyle = GoogleFonts.inter(fontSize: 16);
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -369,7 +366,7 @@ class HomeScreen extends StatelessWidget {
       case 'utilities':
         return 'assets/Utilities.png';
       case 'other':
-        return 'assets/Other.png';
+        return 'assets/Salary.png';
       default:
         return 'assets/Other.png';
     }

@@ -210,7 +210,7 @@ class _AddNewTransactionState extends State<AddNewTransaction> {
                       // Category
                       Align(
                         alignment: Alignment.centerLeft,
-                        child: Text('Category', style: textStyleLabel),
+                        child: Text('Add a category', style: textStyleLabel),
                       ),
                       const SizedBox(height: 12),
                       GestureDetector(
@@ -229,13 +229,18 @@ class _AddNewTransactionState extends State<AddNewTransaction> {
                                   color: const Color(0xFF2A2D31),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
-                                child: Image.asset(
-                                  category != null
-                                      ? category!.imagePath
-                                      : "assets/add.png",
-                                  color: Colors.white,
+                                child: Center(
+                                  child: Image.asset(
+                                    category != null
+                                        ? category!.imagePath
+                                        : "assets/add.png",
+                                    color: Colors.white,
+                                    width: 22, // 👈 Smaller width
+                                    height: 22, // 👈 Smaller height
+                                  ),
                                 ),
                               ),
+
                               const SizedBox(width: 12),
                               Text(
                                 category != null
@@ -319,7 +324,7 @@ class _AddNewTransactionState extends State<AddNewTransaction> {
                                     ),
                                     const SizedBox(width: 8),
                                     const Icon(
-                                      Icons.calendar_today_outlined,
+                                      Icons.calendar_month,
                                       color: Color(0xFF9CA3AF),
                                       size: 20,
                                     ),

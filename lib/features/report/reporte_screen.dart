@@ -4,7 +4,6 @@ import 'package:mactest/features/services/transaction_helper.dart';
 import 'package:mactest/features/providers/currency_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
@@ -13,7 +12,8 @@ class ReportsScreen extends StatefulWidget {
   State<ReportsScreen> createState() => _ReportsScreenState();
 }
 
-class _ReportsScreenState extends State<ReportsScreen> {
+class _ReportsScreenState extends State<ReportsScreen>
+    with SingleTickerProviderStateMixin {
   List<Transaction> allTransactions = [];
   List<Transaction> filteredTransactions = [];
   double totalIncome = 0;
@@ -21,6 +21,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   DateTime? _customStartDate;
   DateTime? _customEndDate;
+
+  late TabController _tabController;
 
   final List<String> _filterOptions = [
     'Last 7 Days',
@@ -34,7 +36,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
     _loadTransactions();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   void _loadTransactions() {
@@ -207,93 +216,91 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
     return Consumer<CurrencyProvider>(
       builder: (context, currencyProvider, child) {
-        return DefaultTabController(
-          length: 2, // Corrected: Set length to 2 to match the number of tabs
-          child: Scaffold(
+        return Scaffold(
+          backgroundColor: const Color(0xFF121212),
+          appBar: AppBar(
             backgroundColor: const Color(0xFF121212),
-            appBar: AppBar(
-              backgroundColor: const Color(0xFF121212),
-              elevation: 0,
-              toolbarHeight: 120,
-
-              title: Text(
-                'Reports',
-                style: GoogleFonts.inter(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 20,
-                ),
-              ),
-
-              centerTitle: true,
-              flexibleSpace: Column(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  const SizedBox(height: 100),
-                  TabBar(
-                    indicator: const BoxDecoration(
-                      // color: Color(0xFF1D2833),
-                      border: Border(
-                        bottom: BorderSide(color: Colors.white, width: 3),
-                      ),
-                    ),
-                    indicatorSize: TabBarIndicatorSize.tab,
-                    labelColor: Colors.white,
-                    unselectedLabelColor: Colors.white54,
-                    labelStyle: GoogleFonts.inter(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                    ),
-                    tabs: const [
-                      Tab(
-                        child: SizedBox(
-                          height: 53,
-                          child: Center(child: Text('Expenses')),
-                        ),
-                      ),
-                      Tab(
-                        child: SizedBox(
-                          height: 53,
-                          child: Center(child: Text('Income')),
-                        ),
-                      ),
-                      Tab(
-                        child: SizedBox(
-                          height: 53,
-                          child: Center(child: Text('')),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+            elevation: 0,
+            toolbarHeight: 120,
+            title: Text(
+              'Reports',
+              style: TextStyle(
+                fontFamily: 'Inter',
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 20,
               ),
             ),
-            body: TabBarView(
+            centerTitle: true,
+            flexibleSpace: Column(
+              mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                TransactionTab(
-                  type: 'expense',
-                  totalAmount: totalExpense,
-                  categoryTotals: _getCategoryTotals(true),
-                  currencySymbol: currencyProvider.currency.symbol,
-                  filterOptions: _filterOptions,
-                  selectedFilter: _selectedFilter,
-                  onFilterChanged: _onFilterChanged,
-                  dailyTotals: _getDailyTotals(true),
-                  transactionMonth: dateRangeText,
-                ),
-                TransactionTab(
-                  type: 'income',
-                  totalAmount: totalIncome,
-                  categoryTotals: _getCategoryTotals(false),
-                  currencySymbol: currencyProvider.currency.symbol,
-                  filterOptions: _filterOptions,
-                  selectedFilter: _selectedFilter,
-                  onFilterChanged: _onFilterChanged,
-                  dailyTotals: _getDailyTotals(false),
-                  transactionMonth: dateRangeText,
+                const SizedBox(height: 100),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: SizedBox(
+                    width: 250, // Fixed width to contain both tabs
+                    child: TabBar(
+                      controller: _tabController,
+                      indicator: const BoxDecoration(
+                        border: Border(
+                          bottom: BorderSide(color: Colors.white, width: 3),
+                        ),
+                      ),
+                      indicatorSize: TabBarIndicatorSize.tab,
+                      labelColor: Colors.white,
+                      unselectedLabelColor: Colors.white54,
+                      labelStyle: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                      tabs: const [
+                        Tab(
+                          child: SizedBox(
+                            height: 53,
+                            child: Center(child: Text('Expenses')),
+                          ),
+                        ),
+                        Tab(
+                          child: SizedBox(
+                            height: 53,
+                            child: Center(child: Text('Income')),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ],
             ),
+          ),
+          body: TabBarView(
+            controller: _tabController,
+            children: [
+              TransactionTab(
+                type: 'expense',
+                totalAmount: totalExpense,
+                categoryTotals: _getCategoryTotals(true),
+                currencySymbol: currencyProvider.currency.symbol,
+                filterOptions: _filterOptions,
+                selectedFilter: _selectedFilter,
+                onFilterChanged: _onFilterChanged,
+                dailyTotals: _getDailyTotals(true),
+                transactionMonth: dateRangeText,
+              ),
+              TransactionTab(
+                type: 'income',
+                totalAmount: totalIncome,
+                categoryTotals: _getCategoryTotals(false),
+                currencySymbol: currencyProvider.currency.symbol,
+                filterOptions: _filterOptions,
+                selectedFilter: _selectedFilter,
+                onFilterChanged: _onFilterChanged,
+                dailyTotals: _getDailyTotals(false),
+                transactionMonth: dateRangeText,
+              ),
+            ],
           ),
         );
       },
@@ -356,7 +363,8 @@ class TransactionTab extends StatelessWidget {
               children: [
                 Text(
                   isExpense ? 'Total Expenses' : 'Total Income',
-                  style: GoogleFonts.inter(
+                  style: TextStyle(
+                    fontFamily: 'Inter',
                     color: Colors.white,
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -379,7 +387,8 @@ class TransactionTab extends StatelessWidget {
                         value: value,
                         child: Text(
                           value,
-                          style: GoogleFonts.inter(
+                          style: TextStyle(
+                            fontFamily: 'Inter',
                             color: Colors.white,
                             fontSize: 16,
                             fontWeight: FontWeight.w400,
@@ -394,12 +403,16 @@ class TransactionTab extends StatelessWidget {
             const SizedBox(height: 30),
             Text(
               isExpense ? 'Expenses' : 'Income',
-              style: GoogleFonts.inter(color: Colors.white, fontSize: 14),
+              style: TextStyle(
+                fontFamily: 'Inter',
+                color: Colors.white,
+                fontSize: 14,
+              ),
             ),
             const SizedBox(height: 10),
             Text(
               '$currencySymbol${totalAmount.toStringAsFixed(0)}',
-              style: GoogleFonts.inter(
+              style: TextStyle(
                 color: Colors.white,
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
@@ -408,7 +421,8 @@ class TransactionTab extends StatelessWidget {
             const SizedBox(height: 10),
             Text(
               transactionMonth,
-              style: GoogleFonts.inter(
+              style: TextStyle(
+                fontFamily: 'Inter',
                 color: const Color(0xFF9EABBA),
                 fontSize: 14,
               ),
@@ -442,7 +456,8 @@ class TransactionTab extends StatelessWidget {
                       const SizedBox(height: 4),
                       Text(
                         dateLabel,
-                        style: GoogleFonts.inter(
+                        style: TextStyle(
+                          fontFamily: 'Inter',
                           color: const Color(0xFF9EABBA),
                           fontSize: 12,
                         ),
@@ -455,7 +470,8 @@ class TransactionTab extends StatelessWidget {
             const SizedBox(height: 32),
             Text(
               isExpense ? 'Expenses by Category' : 'Income by Category',
-              style: GoogleFonts.inter(
+              style: TextStyle(
+                fontFamily: 'Inter',
                 color: Colors.white,
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -464,12 +480,17 @@ class TransactionTab extends StatelessWidget {
             const SizedBox(height: 16),
             Text(
               isExpense ? 'Expenses' : 'Income',
-              style: GoogleFonts.inter(color: Colors.white, fontSize: 14),
+              style: TextStyle(
+                fontFamily: 'Inter',
+                color: Colors.white,
+                fontSize: 14,
+              ),
             ),
             const SizedBox(height: 10),
             Text(
               '$currencySymbol${totalAmount.toStringAsFixed(0)}',
-              style: GoogleFonts.inter(
+              style: TextStyle(
+                fontFamily: 'Inter',
                 color: Colors.white,
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
@@ -478,7 +499,8 @@ class TransactionTab extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               transactionMonth,
-              style: GoogleFonts.inter(
+              style: TextStyle(
+                fontFamily: 'Inter',
                 color: const Color(0xFF9EABBA),
                 fontSize: 14,
               ),
@@ -492,7 +514,8 @@ class TransactionTab extends StatelessWidget {
                     isExpense
                         ? 'No expense data available'
                         : 'No income data available',
-                    style: GoogleFonts.inter(
+                    style: TextStyle(
+                      fontFamily: 'Inter',
                       color: const Color(0xFF9EABBA),
                       fontSize: 16,
                     ),
@@ -500,9 +523,12 @@ class TransactionTab extends StatelessWidget {
                 ),
               )
             else
-              ...sortedCategories.map(
-                (entry) => _buildCategoryBar(entry.key, entry.value, maxAmount),
-              ),
+              ...sortedCategories
+                  .map(
+                    (entry) =>
+                        _buildCategoryBar(entry.key, entry.value, maxAmount),
+                  )
+                  .toList(),
             const SizedBox(height: 32),
           ],
         ),
@@ -520,7 +546,8 @@ class TransactionTab extends StatelessWidget {
             width: 120,
             child: Text(
               title,
-              style: GoogleFonts.inter(
+              style: TextStyle(
+                fontFamily: 'Inter',
                 color: const Color(0xFF9EABBA),
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
@@ -545,14 +572,14 @@ class TransactionTab extends StatelessWidget {
                     height: 21,
                     decoration: BoxDecoration(
                       color: const Color(0xFF243647),
-
                       borderRadius: BorderRadius.circular(4),
                     ),
                     alignment: Alignment.centerRight,
                     padding: const EdgeInsets.only(right: 12),
                     child: Text(
                       amount.toStringAsFixed(0),
-                      style: GoogleFonts.inter(
+                      style: TextStyle(
+                        fontFamily: 'Inter',
                         color: Colors.white,
                         fontSize: 14,
                         fontWeight: FontWeight.w600,

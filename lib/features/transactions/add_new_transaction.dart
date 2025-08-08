@@ -115,12 +115,15 @@ class _AddNewTransactionState extends State<AddNewTransaction> {
   @override
   Widget build(BuildContext context) {
     final textStyleLabel = const TextStyle(
+      fontFamily: 'Inter',
       color: Colors.white,
       fontSize: 16,
       fontWeight: FontWeight.w600,
     );
 
     final textStyleInput = const TextStyle(
+      fontFamily: 'Inter',
+
       color: Color(0xFFFFFFFF),
       fontSize: 14,
     );
@@ -137,6 +140,7 @@ class _AddNewTransactionState extends State<AddNewTransaction> {
         title: const Text(
           'Add Transaction',
           style: TextStyle(
+            fontFamily: 'Inter',
             color: Colors.white,
             fontSize: 18,
             fontWeight: FontWeight.w600,
@@ -144,6 +148,7 @@ class _AddNewTransactionState extends State<AddNewTransaction> {
         ),
         centerTitle: true,
       ),
+
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
@@ -191,6 +196,8 @@ class _AddNewTransactionState extends State<AddNewTransaction> {
                                     child: Text(
                                       type[0].toUpperCase() + type.substring(1),
                                       style: TextStyle(
+                                        fontFamily: 'Inter',
+
                                         color: isSelected
                                             ? Colors.white
                                             : const Color(0xFF9CA3AF),

@@ -47,6 +47,8 @@ class _AddCategoryScreenState extends State<AddCategoryScreen> {
         title: const Text(
           'Categories',
           style: TextStyle(
+            fontFamily: 'Inter',
+
             color: Colors.white,
             fontSize: 18,
             fontWeight: FontWeight.w600,
@@ -140,6 +142,8 @@ class _AddCategoryScreenState extends State<AddCategoryScreen> {
                                   child: Text(
                                     category.title,
                                     style: const TextStyle(
+                                      fontFamily: 'Inter',
+
                                       color: Colors.white,
                                       fontSize: 14,
                                       fontWeight: FontWeight.w500,
@@ -200,6 +204,8 @@ class _AddCategoryScreenState extends State<AddCategoryScreen> {
                 child: const Text(
                   'Add Custom Category',
                   style: TextStyle(
+                    fontFamily: 'Inter',
+
                     color: Colors.white,
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
@@ -229,6 +235,8 @@ class _AddCategoryScreenState extends State<AddCategoryScreen> {
                 child: Text(
                   'Select Category',
                   style: TextStyle(
+                    fontFamily: 'Inter',
+
                     color: selectedCategory != null
                         ? const Color(0xFF1A1D21)
                         : const Color(0xFF9CA3AF),

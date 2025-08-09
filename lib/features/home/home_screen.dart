@@ -46,8 +46,8 @@ class HomeScreen extends StatelessWidget {
       }
     });
 
-    final currency = Provider.of<CurrencyProvider>(context).currency;
-    final symbol = currency.symbol;
+    final currencyProvider = context.watch<CurrencyProvider>();
+    final symbol = currencyProvider.currency.symbol;
     final transactions = context.watch<TransactionProvider>().transactions;
 
     final screenWidth = MediaQuery.of(context).size.width;
@@ -94,7 +94,7 @@ class HomeScreen extends StatelessWidget {
                     children: [
                       Expanded(
                         child: _buildStatCard(
-                          '$symbol${income.toStringAsFixed(0)}',
+                          '$symbol${currencyProvider.toDisplay(income).toStringAsFixed(0)}',
                           'Income',
                           cardWidth,
                         ),
@@ -102,7 +102,7 @@ class HomeScreen extends StatelessWidget {
                       const SizedBox(width: horizontalPadding),
                       Expanded(
                         child: _buildStatCard(
-                          '$symbol${expense.toStringAsFixed(0)}',
+                          '$symbol${currencyProvider.toDisplay(expense).toStringAsFixed(0)}',
                           'Expenses',
                           cardWidth,
                         ),
@@ -111,11 +111,16 @@ class HomeScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   _buildStatCard(
-                    (income - expense) == 0
-                        ? "\$0"
-                        : (income - expense) > 0
-                        ? '$symbol${(income - expense).toStringAsFixed(0)}'
-                        : '-$symbol${(income - expense).toStringAsFixed(0).substring(1)}',
+                    (() {
+                      final savings = currencyProvider.toDisplay(
+                        income - expense,
+                      );
+                      if (savings == 0) {
+                        return '${symbol}0';
+                      }
+                      final absVal = savings.abs().toStringAsFixed(0);
+                      return savings > 0 ? '$symbol$absVal' : '-$symbol$absVal';
+                    })(),
                     'Savings',
                     cardWidth,
                   ),
@@ -137,6 +142,7 @@ class HomeScreen extends StatelessWidget {
                 builder: (context) => const AddNewTransaction(),
               ),
             );
+            // After closing add screen, nothing needed; provider listener updates UI
           },
           icon: const Icon(Icons.add, size: 24, color: Colors.white),
           label: const Text(
@@ -242,10 +248,19 @@ class HomeScreen extends StatelessWidget {
             listen: false,
           ).deleteTransaction(transaction.id);
         },
-        child: _buildTransactionRow(
-          transaction.category,
-          transaction.note,
-          '${transaction.type == 'expense' ? '-' : '+'}$symbol${transaction.amount.toStringAsFixed(0)}',
+        child: Builder(
+          builder: (ctx) {
+            final cp = Provider.of<CurrencyProvider>(ctx, listen: false);
+            final converted = cp
+                .toDisplay(transaction.amount)
+                .toStringAsFixed(0);
+            final sign = transaction.type == 'expense' ? '-' : '+';
+            return _buildTransactionRow(
+              transaction.category,
+              transaction.note,
+              '$sign$symbol$converted',
+            );
+          },
         ),
       );
     }).toList();
@@ -300,11 +315,13 @@ class HomeScreen extends StatelessWidget {
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
-                      Text(
-                        subtitle,
-                        style: subtitleStyle,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                      subtitle.trim().isEmpty
+                          ? const SizedBox.shrink()
+                          : Text(
+                              subtitle,
+                              style: subtitleStyle,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                     ],
                   ),
                 ),

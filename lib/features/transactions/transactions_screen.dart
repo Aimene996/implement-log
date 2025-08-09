@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import 'package:mactest/features/models/transaction.dart';
 import 'package:mactest/features/services/transaction_helper.dart';
 import 'package:mactest/features/transactions/add_new_transaction.dart';
+import 'package:mactest/features/providers/transaction_provider.dart';
 
 class FakeTransaction extends StatefulWidget {
   const FakeTransaction({super.key});
@@ -19,11 +20,34 @@ class FakeTransaction extends StatefulWidget {
 class _FakeTransactionState extends State<FakeTransaction> {
   Map<String, List<Transaction>> groupedTransactions = {};
   Set<String> deletingTransactions = {};
+  VoidCallback? _transactionsListener;
+  TransactionProvider? _txProviderRef;
 
   @override
   void initState() {
     super.initState();
     _loadTransactions();
+    // Listen to TransactionProvider changes to refresh UI live
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _txProviderRef = context.read<TransactionProvider>();
+      _transactionsListener = () {
+        if (!mounted) return;
+        _loadTransactions();
+      };
+      _txProviderRef!.addListener(_transactionsListener!);
+    });
+  }
+
+  @override
+  void dispose() {
+    if (_transactionsListener != null) {
+      try {
+        if (_txProviderRef != null) {
+          _txProviderRef!.removeListener(_transactionsListener!);
+        }
+      } catch (_) {}
+    }
+    super.dispose();
   }
 
   // Add this method to get the appropriate image for each category
@@ -98,6 +122,8 @@ class _FakeTransactionState extends State<FakeTransaction> {
 
   void _loadTransactions() {
     final all = TransactionHelper.getAllTransactions();
+    // Sort by newest first
+    all.sort((a, b) => b.date.compareTo(a.date));
 
     final Map<String, List<Transaction>> grouped = {};
     for (var tx in all) {
@@ -105,6 +131,7 @@ class _FakeTransactionState extends State<FakeTransaction> {
       grouped.putIfAbsent(key, () => []).add(tx);
     }
 
+    if (!mounted) return;
     setState(() {
       groupedTransactions = grouped;
     });
@@ -238,7 +265,9 @@ class _FakeTransactionState extends State<FakeTransaction> {
                       builder: (context) => AddNewTransaction(),
                     ),
                   );
-                  _loadTransactions();
+                  if (mounted) {
+                    _loadTransactions();
+                  }
                 },
               ),
             ],
@@ -349,9 +378,11 @@ class _FakeTransactionState extends State<FakeTransaction> {
                             ),
 
                             title: Text(tx.category, style: titleStyle),
-                            subtitle: Text(tx.note, style: subtitleStyle),
+                            subtitle: tx.note.trim().isEmpty
+                                ? null
+                                : Text(tx.note, style: subtitleStyle),
                             trailing: Text(
-                              '$prefix$symbol${tx.amount}',
+                              '$prefix$symbol${currencyProvider.toDisplay(tx.amount).toStringAsFixed(2)}',
                               style: amountStyle,
                             ),
                           ),

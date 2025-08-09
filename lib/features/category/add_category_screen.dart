@@ -183,15 +183,15 @@ class _AddCategoryScreenState extends State<AddCategoryScreen> {
                     listen: false,
                   ).loadCategories(type: widget.transactionType);
 
-                  // Auto-select newly added custom category
+                  // Auto-select newly added custom category and return it to AddNewTransaction
                   if (result != null && result is CustomCategory) {
-                    setState(() {
-                      selectedCategory = CategoryItem(
-                        title: result.name,
-                        imagePath: 'assets/interogation.png',
-                        type: result.type,
-                      );
-                    });
+                    final selected = CategoryItem(
+                      title: result.name,
+                      imagePath: 'assets/interogation.png',
+                      type: result.type,
+                    );
+                    if (!mounted) return;
+                    Navigator.pop(context, selected);
                   }
                 },
                 style: ElevatedButton.styleFrom(

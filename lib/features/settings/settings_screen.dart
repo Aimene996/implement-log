@@ -6,6 +6,9 @@ import 'package:mactest/features/services/settings_helper.dart';
 import 'package:mactest/features/settings/widgets/reset_dialog.dart';
 import 'package:mactest/features/models/currency.dart';
 import 'package:provider/provider.dart';
+import 'package:hive/hive.dart';
+import 'package:mactest/features/models/transaction.dart';
+import 'package:mactest/features/providers/transaction_provider.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -144,37 +147,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  // Add delete all functionality - this will be used by both Delete All and Reset buttons
-  Future<void> _deleteAllCategories() async {
-    try {
-      final provider = Provider.of<CustomCategoryProvider>(
-        context,
-        listen: false,
-      );
-      await provider.clearAll();
-
-      // Refresh the categories
-      await fetchCustomCategories();
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('All categories deleted successfully!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error deleting categories: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
+  // Old deleteAllCategories kept for reference; replaced by _resetAllData
 
   // Function to show the Delete All confirmation dialog (for Delete All button)
   // Future<void> _showDeleteAllDialog() async {
@@ -222,13 +195,64 @@ class _SettingsScreenState extends State<SettingsScreen> {
       builder: (context) => ConfirmResetDialog(
         onConfirm: () {
           Navigator.of(context).pop(); // Close the dialog first
-          _deleteAllCategories(); // Then execute the same delete function
+          _resetAllData();
         },
         onCancel: () {
           Navigator.of(context).pop(); // Just close the dialog
         },
       ),
     );
+  }
+
+  Future<void> _resetAllData() async {
+    setState(() => isLoading = true);
+    try {
+      // Clear Hive boxes
+      final transactionsBox = Hive.box<Transaction>('transactions');
+      final customCategoriesBox = Hive.box<CustomCategory>('custom_categories');
+      final currencyBox = Hive.box<Currency>('currencyBox');
+
+      await Future.wait([
+        transactionsBox.clear(),
+        customCategoriesBox.clear(),
+        currencyBox.clear(),
+      ]);
+
+      // Reset providers/state
+      if (!mounted) return;
+      final currencyProvider = context.read<CurrencyProvider>();
+      await currencyProvider.updateCurrency(
+        Currency(code: 'USD', symbol: '\$', name: 'US Dollar'),
+      );
+
+      await context.read<CustomCategoryProvider>().loadCategories();
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      context.read<TransactionProvider>().refresh();
+      setState(() {
+        incomeCategories = [];
+        expensesCategories = [];
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('All data has been reset.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to reset data: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => isLoading = false);
+    }
   }
 
   @override
@@ -375,10 +399,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   name: parts[2],
                 );
 
-                Provider.of<CurrencyProvider>(
+                await Provider.of<CurrencyProvider>(
                   context,
                   listen: false,
                 ).updateCurrency(selected);
+
+                if (mounted) {
+                  final rate = context.read<CurrencyProvider>().rateFromBase;
+                  final rateMsg = selected.code == 'USD'
+                      ? '1 USD = 1 USD'
+                      : '1 USD ≈ ${rate.toStringAsFixed(2)} ${selected.code}';
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'Currency updated to ${selected.code}. $rateMsg',
+                      ),
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                }
               }
             },
             items: currencies.map((String value) {

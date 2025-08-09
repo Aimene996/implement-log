@@ -99,11 +99,19 @@ class _AddNewTransactionState extends State<AddNewTransaction> {
       return;
     }
 
+    final currencyProvider = context.read<CurrencyProvider>();
+    final double rateFromBase = currencyProvider.rateFromBase;
+    final double amountDisplay = double.parse(amountText);
+    // Store amounts in base currency (USD). Convert display -> base by dividing by current rate.
+    final double amountInBase = rateFromBase == 0
+        ? amountDisplay
+        : amountDisplay / rateFromBase;
+
     final transaction = Transaction(
       id: const Uuid().v4(),
       type: selectedType,
       category: category != null ? category!.title : 'Uncategorized',
-      amount: double.parse(amountText),
+      amount: amountInBase,
       date: selectedDate,
       note: note,
     );

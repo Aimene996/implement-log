@@ -4,6 +4,7 @@ import 'package:mactest/features/services/transaction_helper.dart';
 import 'package:mactest/features/providers/currency_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:mactest/features/providers/transaction_provider.dart';
 
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
@@ -18,6 +19,8 @@ class _ReportsScreenState extends State<ReportsScreen>
   List<Transaction> filteredTransactions = [];
   double totalIncome = 0;
   double totalExpense = 0;
+  TransactionProvider? _txProviderRef;
+  VoidCallback? _txListener;
 
   DateTime? _customStartDate;
   DateTime? _customEndDate;
@@ -38,16 +41,31 @@ class _ReportsScreenState extends State<ReportsScreen>
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _loadTransactions();
+    // Refresh when transactions change
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _txProviderRef = context.read<TransactionProvider>();
+      _txListener = () {
+        if (!mounted) return;
+        _loadTransactions();
+      };
+      _txProviderRef!.addListener(_txListener!);
+    });
   }
 
   @override
   void dispose() {
+    try {
+      if (_txProviderRef != null && _txListener != null) {
+        _txProviderRef!.removeListener(_txListener!);
+      }
+    } catch (_) {}
     _tabController.dispose();
     super.dispose();
   }
 
   void _loadTransactions() {
     final transactions = TransactionHelper.getAllTransactions();
+    if (!mounted) return;
     setState(() {
       allTransactions = transactions;
       filteredTransactions = _applyDateFilter(_selectedFilter);
@@ -222,6 +240,14 @@ class _ReportsScreenState extends State<ReportsScreen>
             backgroundColor: const Color(0xFF121212),
             elevation: 0,
             toolbarHeight: 120,
+            bottom: PreferredSize(
+              preferredSize: const Size.fromHeight(1),
+              child: Container(
+                height: 1,
+                width: double.infinity,
+                color: const Color(0xFF334D66),
+              ),
+            ),
             title: Text(
               'Reports',
               style: TextStyle(
@@ -242,12 +268,10 @@ class _ReportsScreenState extends State<ReportsScreen>
                     width: 250, // Fixed width to contain both tabs
                     child: TabBar(
                       controller: _tabController,
-                      indicator: const BoxDecoration(
-                        border: Border(
-                          bottom: BorderSide(color: Colors.white, width: 3),
-                        ),
+                      indicator: const UnderlineTabIndicator(
+                        borderSide: BorderSide(color: Colors.white, width: 3),
                       ),
-                      indicatorSize: TabBarIndicatorSize.tab,
+                      indicatorSize: TabBarIndicatorSize.label,
                       labelColor: Colors.white,
                       unselectedLabelColor: Colors.white54,
                       labelStyle: TextStyle(
@@ -334,6 +358,8 @@ class TransactionTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final rate = context.watch<CurrencyProvider>().rateFromBase;
+    final convertedTotal = (totalAmount * rate).toStringAsFixed(0);
     final isExpense = type == 'expense';
 
     final sortedCategories = categoryTotals.entries.toList()
@@ -411,7 +437,7 @@ class TransactionTab extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             Text(
-              '$currencySymbol${totalAmount.toStringAsFixed(0)}',
+              '$currencySymbol$convertedTotal',
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 28,
@@ -488,7 +514,7 @@ class TransactionTab extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             Text(
-              '$currencySymbol${totalAmount.toStringAsFixed(0)}',
+              '$currencySymbol$convertedTotal',
               style: TextStyle(
                 fontFamily: 'Inter',
                 color: Colors.white,
@@ -523,12 +549,10 @@ class TransactionTab extends StatelessWidget {
                 ),
               )
             else
-              ...sortedCategories
-                  .map(
-                    (entry) =>
-                        _buildCategoryBar(entry.key, entry.value, maxAmount),
-                  )
-                  .toList(),
+              ...sortedCategories.map(
+                (entry) =>
+                    _buildCategoryBar(entry.key, entry.value, maxAmount, rate),
+              ),
             const SizedBox(height: 32),
           ],
         ),
@@ -536,7 +560,12 @@ class TransactionTab extends StatelessWidget {
     );
   }
 
-  Widget _buildCategoryBar(String title, double amount, double maxAmount) {
+  Widget _buildCategoryBar(
+    String title,
+    double amount,
+    double maxAmount,
+    double rate,
+  ) {
     double percentage = maxAmount > 0 ? amount / maxAmount : 0;
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
@@ -577,7 +606,7 @@ class TransactionTab extends StatelessWidget {
                     alignment: Alignment.centerRight,
                     padding: const EdgeInsets.only(right: 12),
                     child: Text(
-                      amount.toStringAsFixed(0),
+                      (amount * rate).toStringAsFixed(0),
                       style: TextStyle(
                         fontFamily: 'Inter',
                         color: Colors.white,

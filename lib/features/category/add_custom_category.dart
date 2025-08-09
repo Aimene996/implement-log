@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mactest/features/providers/custom_category.dart';
 import 'package:provider/provider.dart';
+import 'package:mactest/features/services/custom_category_helper.dart';
 
 class AddCustomCategory extends StatefulWidget {
   const AddCustomCategory({super.key, required this.transactionType});
@@ -36,15 +37,18 @@ class _AddCustomCategoryState extends State<AddCustomCategory> {
     setState(() => _isLoading = true);
 
     try {
+      // Create and get the new category instance directly
+      final created = await CustomCategoryHelper.addCategoryWithName(
+        name,
+        widget.transactionType,
+      );
+
+      // Refresh provider state
       final provider = Provider.of<CustomCategoryProvider>(
         context,
         listen: false,
       );
-
-      // Use the provider's addCategory method
-      await provider.addCategory(name, widget.transactionType);
-
-      print('✅ Custom category "$name" added via provider.');
+      await provider.loadCategories(type: widget.transactionType);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -53,7 +57,8 @@ class _AddCustomCategoryState extends State<AddCustomCategory> {
             backgroundColor: Colors.green,
           ),
         );
-        Navigator.of(context).pop();
+        // Return the created custom category to the previous screen
+        Navigator.of(context).pop(created);
       }
     } catch (e) {
       if (mounted) {

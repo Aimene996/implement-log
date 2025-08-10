@@ -5,7 +5,7 @@ import 'package:mactest/features/services/exchange_rate_service.dart';
 
 class CurrencyProvider extends ChangeNotifier {
   Currency _currency = Currency(code: 'USD', symbol: '\$', name: 'US Dollar');
-  String _baseCode = 'USD';
+  final String _baseCode = 'USD';
   double _rateFromBase = 1.0; // base -> current currency
 
   Currency get currency => _currency;

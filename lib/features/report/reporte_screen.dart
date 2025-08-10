@@ -28,13 +28,14 @@ class _ReportsScreenState extends State<ReportsScreen>
   late TabController _tabController;
 
   final List<String> _filterOptions = [
+    'All',
     'Last 7 Days',
     'Last 30 Days',
     'This Month',
     'Last Month',
     'Custom',
   ];
-  String _selectedFilter = 'Last 30 Days';
+  String _selectedFilter = 'This Month';
 
   @override
   void initState() {
@@ -138,6 +139,8 @@ class _ReportsScreenState extends State<ReportsScreen>
     DateTime endDate = now;
 
     switch (filter) {
+      case 'All':
+        return allTransactions;
       case 'Last 7 Days':
         startDate = now.subtract(const Duration(days: 6));
         break;
@@ -168,6 +171,14 @@ class _ReportsScreenState extends State<ReportsScreen>
       return tx.date.isAfter(startDate.subtract(const Duration(days: 1))) &&
           tx.date.isBefore(endDate.add(const Duration(days: 1)));
     }).toList();
+  }
+
+  List<Transaction> _getTransactionsForType(bool isExpense) {
+    final list = filteredTransactions
+        .where((tx) => tx.type == (isExpense ? 'expense' : 'income'))
+        .toList();
+    list.sort((a, b) => a.date.compareTo(b.date));
+    return list;
   }
 
   Map<String, double> _getCategoryTotals(bool isExpenseTab) {
@@ -311,6 +322,7 @@ class _ReportsScreenState extends State<ReportsScreen>
                 selectedFilter: _selectedFilter,
                 onFilterChanged: _onFilterChanged,
                 dailyTotals: _getDailyTotals(true),
+                transactionsForChart: _getTransactionsForType(true),
                 transactionMonth: dateRangeText,
               ),
               TransactionTab(
@@ -322,6 +334,7 @@ class _ReportsScreenState extends State<ReportsScreen>
                 selectedFilter: _selectedFilter,
                 onFilterChanged: _onFilterChanged,
                 dailyTotals: _getDailyTotals(false),
+                transactionsForChart: _getTransactionsForType(false),
                 transactionMonth: dateRangeText,
               ),
             ],
@@ -342,6 +355,7 @@ class TransactionTab extends StatelessWidget {
   final Function(String?) onFilterChanged;
   final Map<DateTime, double> dailyTotals;
   final String transactionMonth;
+  final List<Transaction> transactionsForChart;
 
   const TransactionTab({
     super.key,
@@ -354,7 +368,52 @@ class TransactionTab extends StatelessWidget {
     required this.onFilterChanged,
     required this.dailyTotals,
     required this.transactionMonth,
+    required this.transactionsForChart,
   });
+
+  // _buildFullMonthBars removed; replaced by _buildBarsFromTransactions
+
+  List<Widget> _buildBarsFromTransactions(List<Transaction> txs) {
+    if (txs.isEmpty) return [];
+    // Group by day
+    final Map<DateTime, double> perDay = {};
+    for (final tx in txs) {
+      final key = DateTime(tx.date.year, tx.date.month, tx.date.day);
+      perDay[key] = (perDay[key] ?? 0) + tx.amount;
+    }
+    final entries = perDay.entries.toList()
+      ..sort((a, b) => a.key.compareTo(b.key));
+    final maxVal = entries
+        .map((e) => e.value)
+        .fold<double>(0.0, (p, v) => v > p ? v : p);
+    return entries.map((e) {
+      final barHeight = maxVal > 0 ? (e.value / maxVal) * 150 : 0.0;
+      final label = DateFormat('d').format(e.key);
+      return Container(
+        width: 30,
+        margin: const EdgeInsets.only(right: 12),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 16,
+              height: barHeight,
+              color: const Color(0xFF243647),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: const TextStyle(
+                fontFamily: 'Inter',
+                color: Color(0xFF9EABBA),
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
+      );
+    }).toList();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -369,13 +428,9 @@ class TransactionTab extends StatelessWidget {
         ? sortedCategories.first.value
         : 1.0;
 
-    // Sort dailyTotals by date to display them in chronological order
-    final sortedDailyTotals = dailyTotals.entries.toList()
-      ..sort((a, b) => a.key.compareTo(b.key));
+    // Build bars directly from transactionsForChart; no need to sort dailyTotals here
 
-    final maxDailyTotal = dailyTotals.values.isNotEmpty
-        ? dailyTotals.values.reduce((curr, next) => curr > next ? curr : next)
-        : 1.0;
+    // maxDailyTotal not needed after switching to _buildFullMonthBars
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -454,44 +509,16 @@ class TransactionTab extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            // Corrected Row to align chart columns to the bottom
-            Row(
-              mainAxisAlignment: MainAxisAlignment.start,
-              crossAxisAlignment:
-                  CrossAxisAlignment.end, // Align items to the bottom
-              children: sortedDailyTotals.map((entry) {
-                final date = entry.key;
-                final amount = entry.value;
-                final barHeight = maxDailyTotal > 0
-                    ? (amount / maxDailyTotal) * 150
-                    : 0.0;
-                final dateLabel = DateFormat('d').format(date);
-
-                return Container(
-                  width: 30, // Use a fixed width for consistent spacing
-                  margin: const EdgeInsets.only(right: 12),
-                  child: Column(
-                    mainAxisSize: MainAxisSize
-                        .min, // Ensure the column takes up minimal space
-                    children: [
-                      Container(
-                        width: 16,
-                        height: barHeight,
-                        color: const Color(0xFF243647),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        dateLabel,
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          color: const Color(0xFF9EABBA),
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }).toList(),
+            // Horizontally scrollable daily totals chart (one bar per day with transactions)
+            SizedBox(
+              width: double.infinity,
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: _buildBarsFromTransactions(transactionsForChart),
+                ),
+              ),
             ),
             const SizedBox(height: 32),
             Text(
